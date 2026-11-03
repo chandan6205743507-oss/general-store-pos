@@ -1,24 +1,41 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
   runApp(const GeneralStoreApp());
 }
 
-enum ItemType { piece, looseKg }
+class GeneralStoreApp extends StatelessWidget {
+  const GeneralStoreApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Kirana POS',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFF7F9FC),
+      ),
+      home: const MainNavigationScreen(),
+    );
+  }
+}
+
+enum ItemType { standard, loose }
 
 class Product {
   final String id;
   String name;
   double buyPrice;
   double sellPrice;
-  int stock;
+  double stock;
   ItemType type;
+  String? unit;
+  String? barcode;
   String? imagePath;
 
   Product({
@@ -27,7 +44,9 @@ class Product {
     required this.buyPrice,
     required this.sellPrice,
     required this.stock,
-    required this.type,
+    this.type = ItemType.standard,
+    this.unit = 'pcs',
+    this.barcode,
     this.imagePath,
   });
 }
@@ -35,15 +54,15 @@ class Product {
 class CartItem {
   final Product product;
   double quantity;
+  double customPrice;
 
-  CartItem({required this.product, required this.quantity});
+  CartItem({
+    required this.product,
+    required this.quantity,
+    required this.customPrice,
+  });
 
-  double get totalPrice {
-    if (product.type == ItemType.looseKg) {
-      return (product.sellPrice / 1000) * quantity;
-    }
-    return product.sellPrice * quantity;
-  }
+  double get total => quantity * customPrice;
 }
 
 class UdhaarRecord {
@@ -60,25 +79,22 @@ class UdhaarRecord {
   });
 }
 
-class GeneralStoreApp extends StatelessWidget {
-  const GeneralStoreApp({super.key});
+class SaleHistory {
+  final String id;
+  final DateTime date;
+  final double total;
+  final String paymentMode;
+  final List<CartItem> items;
+  final String? customerName;
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'General Store',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF9F9F7),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF7A9E58),
-          primary: const Color(0xFF7A9E58),
-        ),
-        useMaterial3: true,
-      ),
-      home: const MainNavigationScreen(),
-    );
-  }
+  SaleHistory({
+    required this.id,
+    required this.date,
+    required this.total,
+    required this.paymentMode,
+    required this.items,
+    this.customerName,
+  });
 }
 
 class MainNavigationScreen extends StatefulWidget {
@@ -91,410 +107,424 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 1;
 
-  String storeName = "General Store";
-  String storeUPI = "dukaandar@upi";
-  final String appOwnerUPI = "chandan@upi";
+  final String shopName = "Mahto Store";
+  final String upiId = "6202187843@upi";
+  final ImagePicker _picker = ImagePicker();
 
-  final List<Product> catalog = [
-    Product(id: '8906115880037', name: 'Butter Delite', buyPrice: 4.0, sellPrice: 5.0, stock: 148, type: ItemType.piece),
-    Product(id: 'KURKURE_01', name: 'Kurkure', buyPrice: 4.0, sellPrice: 5.0, stock: 50, type: ItemType.piece),
-    Product(id: 'LOOSE_RICE', name: 'चावल (Loose Rice)', buyPrice: 34.0, sellPrice: 40.0, stock: 100, type: ItemType.looseKg),
-    Product(id: 'LOOSE_SUGAR', name: 'चीनी (Loose Sugar)', buyPrice: 38.0, sellPrice: 44.0, stock: 100, type: ItemType.looseKg),
-    Product(id: 'LOOSE_DAL', name: 'चना सत्तू', buyPrice: 100.0, sellPrice: 130.0, stock: 50, type: ItemType.looseKg),
+  List<Product> inventory = [
+    Product(id: '1', name: 'Aashirvaad Atta 5kg', buyPrice: 210, sellPrice: 245, stock: 15, barcode: '890103000001'),
+    Product(id: '2', name: 'Tata Salt 1kg', buyPrice: 22, sellPrice: 28, stock: 40, barcode: '890103000002'),
+    Product(id: '3', name: 'Fortune Mustard Oil 1L', buyPrice: 130, sellPrice: 148, stock: 25, barcode: '890103000003'),
+    Product(id: '4', name: 'Maggi 2-Min Noodles', buyPrice: 11.5, sellPrice: 14, stock: 80, barcode: '890103000004'),
+    Product(id: 'l1', name: 'Sugar (Chini)', buyPrice: 38, sellPrice: 44, stock: 100, type: ItemType.loose, unit: 'kg'),
+    Product(id: 'l2', name: 'Basmati Rice', buyPrice: 65, sellPrice: 85, stock: 150, type: ItemType.loose, unit: 'kg'),
+    Product(id: 'l3', name: 'Arhar Dal', buyPrice: 120, sellPrice: 145, stock: 60, type: ItemType.loose, unit: 'kg'),
+    Product(id: 'l4', name: 'Potato (Aloo)', buyPrice: 18, sellPrice: 25, stock: 80, type: ItemType.loose, unit: 'kg'),
   ];
 
-  final List<CartItem> cart = [];
-  final List<UdhaarRecord> udhaarRecords = [];
-  double todaySalesAmount = 0.0;
+  List<CartItem> cart = [];
+  List<UdhaarRecord> udhaarList = [];
+  List<SaleHistory> salesHistory = [];
 
-  void _triggerClick() {
-    HapticFeedback.selectionClick();
-    SystemSound.play(SystemSoundType.click);
-  }
+  double get grandTotal => cart.fold(0, (sum, item) => sum + item.total);
 
-  void _addToCart(Product product, {double qty = 1.0}) {
-    _triggerClick();
-    setState(() {
-      final index = cart.indexWhere((e) => e.product.id == product.id);
-      if (index != -1 && product.type == ItemType.piece) {
-        cart[index].quantity += 1;
-      } else {
-        cart.add(CartItem(product: product, quantity: qty));
-      }
-    });
-  }
-
-  double get grandTotal => cart.fold(0.0, (sum, item) => sum + item.totalPrice);
-
-  void _openScanner() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Scan Barcode')),
-          body: MobileScanner(
-            onDetect: (capture) {
-              final barcodes = capture.barcodes;
-              for (final barcode in barcodes) {
-                if (barcode.rawValue != null) {
-                  final String code = barcode.rawValue!;
-                  final found = catalog.firstWhere(
-                    (p) => p.id == code,
-                    orElse: () {
-                      final newP = Product(
-                        id: code,
-                        name: 'Item $code',
-                        buyPrice: 8.0,
-                        sellPrice: 10.0,
-                        stock: 50,
-                        type: ItemType.piece,
-                      );
-                      catalog.add(newP);
-                      return newP;
-                    },
-                  );
-                  Navigator.of(context).pop();
-                  _addToCart(found);
-                  break;
-                }
-              }
-            },
-          ),
+  Widget _buildItemImage(String? imagePath, String name) {
+    if (imagePath != null && imagePath.isNotEmpty && File(imagePath).existsSync()) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.file(File(imagePath), width: 44, height: 44, fit: BoxFit.cover),
+      );
+    }
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E7D32), fontSize: 18),
         ),
       ),
     );
   }
 
-  void _showLooseItemDialog(Product product) {
-    final gramCtrl = TextEditingController(text: '100');
+  void _addToCart(Product p, {double qty = 1.0}) {
+    setState(() {
+      int idx = cart.indexWhere((c) => c.product.id == p.id);
+      if (idx >= 0) {
+        cart[idx].quantity += qty;
+      } else {
+        cart.add(CartItem(product: p, quantity: qty, customPrice: p.sellPrice));
+      }
+    });
+  }
+
+  void _showLooseItemSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final looseItems = inventory.where((i) => i.type == ItemType.loose).toList();
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: const EdgeInsets.all(16),
+              height: MediaQuery.of(context).size.height * 0.75,
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Loose / Weighing Items",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      )
+                    ],
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: looseItems.isEmpty
+                        ? const Center(child: Text("No loose items added yet"))
+                        : GridView.builder(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 1.1,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                            ),
+                            itemCount: looseItems.length,
+                            itemBuilder: (context, i) {
+                              final item = looseItems[i];
+                              return InkWell(
+                                onTap: () {
+                                  Navigator.pop(ctx);
+                                  _showWeightInputDialog(item);
+                                },
+                                child: Card(
+                                  elevation: 1,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        _buildItemImage(item.imagePath, item.name),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          item.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        Text(
+                                          "₹${item.sellPrice}/${item.unit}",
+                                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE65100),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.add),
+                      label: const Text("+ New loose Item", style: TextStyle(fontSize: 16)),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _showAddNewProductDialog(defaultLoose: true);
+                      },
+                    ),
+                  )
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showWeightInputDialog(Product p) {
+    final qtyCtrl = TextEditingController(text: "1");
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('${product.name} (₹${product.sellPrice.toInt()}/kg)'),
-        content: TextField(
-          controller: gramCtrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Weight (Grams me)', suffixText: 'g'),
+      builder: (ctx) => AlertDialog(
+        title: Text("Enter Weight/Qty for ${p.name}"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Rate: ₹${p.sellPrice} per ${p.unit}"),
+            const SizedBox(height: 12),
+            TextField(
+              controller: qtyCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: "Quantity (${p.unit})",
+                border: const OutlineInputBorder(),
+                hintText: "e.g. 0.5 for 500g, 1.25",
+              ),
+            ),
+          ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7A9E58)),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E7D32), foregroundColor: Colors.white),
             onPressed: () {
-              final g = double.tryParse(gramCtrl.text) ?? 100.0;
-              Navigator.pop(context);
-              _addToCart(product, qty: g);
+              double? q = double.tryParse(qtyCtrl.text.trim());
+              if (q != null && q > 0) {
+                _addToCart(p, qty: q);
+              }
+              Navigator.pop(ctx);
             },
-            child: const Text('Add to Bill', style: TextStyle(color: Colors.white)),
-          ),
+            child: const Text("Add to Bill"),
+          )
         ],
       ),
     );
   }
 
-  void _openLooseItemSheet() {
+  void _showPaymentSuccessBill(String mode, {String? customerName}) {
+    final receiptItems = List<CartItem>.from(cart);
+    final totalAmount = grandTotal;
+    final now = DateTime.now();
+
+    setState(() {
+      for (var c in receiptItems) {
+        c.product.stock -= c.quantity;
+      }
+      salesHistory.insert(
+        0,
+        SaleHistory(
+          id: now.millisecondsSinceEpoch.toString(),
+          date: now,
+          total: totalAmount,
+          paymentMode: mode,
+          items: receiptItems,
+          customerName: customerName,
+        ),
+      );
+      cart.clear();
+    });
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        padding: const EdgeInsets.all(16),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(20),
+        height: MediaQuery.of(context).size.height * 0.85,
         child: Column(
           children: [
-            const Text('Loose Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Expanded(
-              child: ListView(
-                children: catalog.where((p) => p.type == ItemType.looseKg).map((p) {
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    child: ListTile(
-                      leading: _buildItemImage(p.imagePath, p.name),
-                      title: Text(p.name),
-                      subtitle: Text('₹${p.sellPrice.toInt()}/kg | Stock: ${p.stock}kg'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showLooseItemDialog(p);
-                      },
-                    ),
-                  );
-                }).toList(),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAFAFA),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                children: [
+                  Text(shopName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text("Date: ${now.day}/${now.month}/${now.year}  Time: ${now.hour}:${now.minute}"),
+                  Text("Mode: $mode ${customerName != null ? "($customerName)" : ""}"),
+                  const Divider(),
+                  ...receiptItems.map((item) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(child: Text("${item.product.name} x ${item.quantity} ${item.product.unit}")),
+                            Text("₹${item.total.toStringAsFixed(1)}"),
+                          ],
+                        ),
+                      )),
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("TOTAL PAID", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text("₹${totalAmount.toStringAsFixed(1)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
+                    ],
+                  ),
+                ],
               ),
             ),
+            const Spacer(),
             SizedBox(
               width: double.infinity,
               height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFCE933C)),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white),
+                icon: const Icon(Icons.share),
+                label: const Text("Share on WhatsApp"),
                 onPressed: () {
-                  Navigator.pop(context);
-                  _showProductEditOrAddDialog(forceLoose: true);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Receipt copied to WhatsApp!")));
                 },
-                child: const Text('+ New loose Item', style: TextStyle(color: Colors.white, fontSize: 16)),
               ),
             ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text("New Bill", style: TextStyle(fontSize: 16)),
+              ),
+            )
           ],
         ),
       ),
     );
   }
 
-  void _showProductEditOrAddDialog({Product? existingProduct, bool forceLoose = false}) {
-    final nameCtrl = TextEditingController(text: existingProduct?.name ?? '');
-    final buyCtrl = TextEditingController(text: existingProduct != null ? existingProduct.buyPrice.toString() : '');
-    final sellCtrl = TextEditingController(text: existingProduct != null ? existingProduct.sellPrice.toString() : '');
-    final currentStockCtrl = TextEditingController(text: existingProduct != null ? existingProduct.stock.toString() : '50');
-    final addStockCtrl = TextEditingController(text: '');
-    String? localImg = existingProduct?.imagePath;
-    ItemType selectedType = forceLoose ? ItemType.looseKg : (existingProduct?.type ?? ItemType.piece);
-
+  void _showOnlineQrDialog() {
+    final String upiUrl = "upi://pay?pa=$upiId&pn=$shopName&am=${grandTotal.toStringAsFixed(2)}&cu=INR";
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          contentPadding: const EdgeInsets.all(16),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (existingProduct != null)
-                  Text(existingProduct.id, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () async {
-                    final picker = ImagePicker();
-                    final picked = await picker.pickImage(source: ImageSource.camera);
-                    if (picked != null) {
-                      setDlgState(() => localImg = picked.path);
-                    }
-                  },
-                  child: Container(
-                    height: 90,
-                    width: 90,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade400),
-                    ),
-                    child: localImg != null
-                        ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.file(File(localImg!), fit: BoxFit.cover))
-                        : const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.camera_alt, color: Colors.grey),
-                              Text('Photo Lein', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                            ],
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Product name', border: OutlineInputBorder())),
-                const SizedBox(height: 10),
-                TextField(controller: buyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Buying price of 1 Piece (₹)', border: OutlineInputBorder())),
-                const SizedBox(height: 10),
-                TextField(controller: sellCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Your selling price of 1 Piece (₹)', border: OutlineInputBorder())),
-                const SizedBox(height: 10),
-                TextField(controller: currentStockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Current pieces in shop', border: OutlineInputBorder())),
-                if (existingProduct != null) ...[
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: addStockCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '+ Naya Maal Aaya (Pieces Add Karein)',
-                      hintText: 'e.g. 50',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            if (existingProduct != null)
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.grey),
-                onPressed: () {
-                  setState(() => catalog.remove(existingProduct));
-                  Navigator.pop(context);
-                },
+      builder: (ctx) => AlertDialog(
+        title: const Center(child: Text("Scan UPI QR to Pay")),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 200,
+              height: 200,
+              child: QrImageView(
+                data: upiUrl,
+                version: QrVersions.auto,
+                size: 200.0,
               ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFCE933C),
-                minimumSize: const Size(140, 45),
-              ),
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                final buy = double.tryParse(buyCtrl.text) ?? 0.0;
-                final sell = double.tryParse(sellCtrl.text) ?? 0.0;
-                int currentStk = int.tryParse(currentStockCtrl.text) ?? 0;
-                final addedStk = int.tryParse(addStockCtrl.text) ?? 0;
-                currentStk += addedStk;
-
-                if (name.isNotEmpty && sell > 0) {
-                  setState(() {
-                    if (existingProduct != null) {
-                      existingProduct.name = name;
-                      existingProduct.buyPrice = buy;
-                      existingProduct.sellPrice = sell;
-                      existingProduct.stock = currentStk;
-                      existingProduct.imagePath = localImg;
-                    } else {
-                      catalog.add(Product(
-                        id: 'ITEM_${DateTime.now().millisecondsSinceEpoch}',
-                        name: name,
-                        buyPrice: buy,
-                        sellPrice: sell,
-                        stock: currentStk,
-                        type: selectedType,
-                        imagePath: localImg,
-                      ));
-                    }
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: Text(existingProduct != null ? 'Update' : 'Add Item', style: const TextStyle(color: Colors.white)),
             ),
+            const SizedBox(height: 12),
+            Text("Amount: ₹${grandTotal.toStringAsFixed(2)}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+            Text("UPI ID: $upiId", style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ],
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showPaymentSuccessBill("Online UPI");
+            },
+            child: const Text("Payment Received"),
+          )
+        ],
       ),
     );
   }
 
-  void _showPaperReceipt(String paymentType) {
-    final upiUrl = 'upi://pay?pa=$storeUPI&pn=${Uri.encodeComponent(storeName)}&am=${grandTotal.toStringAsFixed(2)}&cu=INR';
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          backgroundColor: const Color(0xFFF2F2F2),
-          appBar: AppBar(title: const Text('See Bill'), backgroundColor: Colors.white, elevation: 0),
-          body: Column(
-            children: [
-              const SizedBox(height: 16),
-              Center(
-                child: Container(
-                  width: 320,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
-                  ),
-                  child: Column(
-                    children: [
-                      Text(storeName.toUpperCase(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      Text('${DateTime.now().day}/${DateTime.now().month} ${TimeOfDay.now().format(context)}',
-                          style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                      const Divider(thickness: 1),
-                      ...cart.map((item) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(item.product.name),
-                                Text(item.product.type == ItemType.looseKg
-                                    ? '${item.quantity.toInt()}g  ₹${item.totalPrice.toStringAsFixed(0)}'
-                                    : '${item.quantity.toInt()} pc  ₹${item.totalPrice.toStringAsFixed(0)}'),
-                              ],
-                            ),
-                          )),
-                      const Divider(thickness: 1),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('${cart.length} items', style: const TextStyle(color: Colors.grey)),
-                          Text('₹${grandTotal.toStringAsFixed(0)}',
-                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      if (paymentType == 'ONLINE') ...[
-                        const SizedBox(height: 12),
-                        QrImageView(data: upiUrl, version: QrVersions.auto, size: 140.0),
-                        const Text('Scan & Pay to Store UPI', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                      ]
-                    ],
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE5DECE)),
-                        icon: const Icon(Icons.share, color: Colors.green),
-                        label: const Text('Share on WhatsApp', style: TextStyle(color: Colors.black87)),
-                        onPressed: () {},
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7A9E58)),
-                        icon: const Icon(Icons.receipt, color: Colors.white),
-                        label: const Text('New Bill', style: TextStyle(color: Colors.white, fontSize: 16)),
-                        onPressed: () {
-                          setState(() {
-                            todaySalesAmount += grandTotal;
-                            for (var c in cart) {
-                              if (c.product.type == ItemType.piece) {
-                                c.product.stock -= c.quantity.toInt();
-                              }
-                            }
-                            cart.clear();
-                          });
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showUdhaarSheet() {
+  void _showUdhaarDialog() {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Udhaar'),
+      builder: (ctx) => AlertDialog(
+        title: const Text("Add to Udhaar (Credit)"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number')),
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Person name')),
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Person Name*", border: OutlineInputBorder())),
             const SizedBox(height: 10),
-            Text('Udhaar: ₹${grandTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: "Mobile Number", border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            Text("Total Udhaar Amount: ₹${grandTotal.toStringAsFixed(1)}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
           ],
         ),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7A9E58)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () {
-              if (nameCtrl.text.isNotEmpty) {
-                setState(() {
-                  udhaarRecords.add(UdhaarRecord(
-                    personName: nameCtrl.text.trim(),
-                    phone: phoneCtrl.text.trim(),
-                    amount: grandTotal,
-                    date: DateTime.now(),
-                  ));
-                  for (var c in cart) {
-                    if (c.product.type == ItemType.piece) {
-                      c.product.stock -= c.quant
+              if (nameCtrl.text.trim().isEmpty) return;
+              setState(() {
+                udhaarList.add(UdhaarRecord(
+                  personName: nameCtrl.text.trim(),
+                  phone: phoneCtrl.text.trim(),
+                  amount: grandTotal,
+                  date: DateTime.now(),
+                ));
+              });
+              Navigator.pop(ctx);
+              _showPaymentSuccessBill("Udhaar", customerName: nameCtrl.text.trim());
+            },
+            child: const Text("Save Udhaar"),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showAddNewProductDialog({bool defaultLoose = false}) {
+    final nameCtrl = TextEditingController();
+    final buyCtrl = TextEditingController();
+    final sellCtrl = TextEditingController();
+    final stockCtrl = TextEditingController();
+    final unitCtrl = TextEditingController(text: defaultLoose ? "kg" : "pcs");
+    String? localImgPath;
+    ItemType selectedType = defaultLoose ? ItemType.loose : ItemType.standard;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlgState) => AlertDialog(
+          title: Text(selectedType == ItemType.loose ? "Add Loose Item" : "Add New Item"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await _picker.pickImage(source: ImageSource.camera);
+                    if (picked != null) {
+                      setDlgState(() => localImgPath = picked.path);
+                    }
+                  },
+                  child: Container(
+                    height: 70,
+                    width: 70,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey),
+                    ),
+                    child: localImgPath != null
+                        ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.file(File(localImgPath!), fit: BoxFit.cover))
+                        : const Icon(Icons.camera_alt, color: Colors.grey, size: 30),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Product Name*", border: OutlineInputBorder())),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: TextField(controller: buyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Buy Price", border: OutlineInputBorder()))),
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(controller: sellCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText:
