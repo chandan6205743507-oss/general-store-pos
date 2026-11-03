@@ -1,5 +1,5 @@
 name: general_store
-description: "General Store Billing App"
+description: "General Store POS Billing App"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   mobile_scanner: ^5.2.3
   qr_flutter: ^4.1.0
+  image_picker: ^1.1.2
 
 flutter:
   uses-material-design: true
+  
