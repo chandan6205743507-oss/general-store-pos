@@ -2,99 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'models.dart';
 
 void main() {
-  runApp(const GeneralStoreApp());
-}
-
-class GeneralStoreApp extends StatelessWidget {
-  const GeneralStoreApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Kirana POS',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF7F9FC),
-      ),
-      home: const MainNavigationScreen(),
-    );
-  }
-}
-
-enum ItemType { standard, loose }
-
-class Product {
-  final String id;
-  String name;
-  double buyPrice;
-  double sellPrice;
-  double stock;
-  ItemType type;
-  String? unit;
-  String? barcode;
-  String? imagePath;
-
-  Product({
-    required this.id,
-    required this.name,
-    required this.buyPrice,
-    required this.sellPrice,
-    required this.stock,
-    this.type = ItemType.standard,
-    this.unit = 'pcs',
-    this.barcode,
-    this.imagePath,
-  });
-}
-
-class CartItem {
-  final Product product;
-  double quantity;
-  double customPrice;
-
-  CartItem({
-    required this.product,
-    required this.quantity,
-    required this.customPrice,
-  });
-
-  double get total => quantity * customPrice;
-}
-
-class UdhaarRecord {
-  final String personName;
-  final String phone;
-  final double amount;
-  final DateTime date;
-
-  UdhaarRecord({
-    required this.personName,
-    required this.phone,
-    required this.amount,
-    required this.date,
-  });
-}
-
-class SaleHistory {
-  final String id;
-  final DateTime date;
-  final double total;
-  final String paymentMode;
-  final List<CartItem> items;
-  final String? customerName;
-
-  SaleHistory({
-    required this.id,
-    required this.date,
-    required this.total,
-    required this.paymentMode,
-    required this.items,
-    this.customerName,
-  });
+  runApp(const MaterialApp(
+    title: 'Kirana POS',
+    debugShowCheckedModeBanner: false,
+    home: MainNavigationScreen(),
+  ));
 }
 
 class MainNavigationScreen extends StatefulWidget {
@@ -106,7 +21,6 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 1;
-
   final String shopName = "Mahto Store";
   final String upiId = "6202187843@upi";
   final ImagePicker _picker = ImagePicker();
@@ -138,10 +52,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Container(
       width: 44,
       height: 44,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(8)),
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
@@ -167,100 +78,55 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         final looseItems = inventory.where((i) => i.type == ItemType.loose).toList();
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Container(
-              padding: const EdgeInsets.all(16),
-              height: MediaQuery.of(context).size.height * 0.75,
-              child: Column(
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Loose / Weighing Items",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(ctx),
-                      )
-                    ],
-                  ),
-                  const Divider(),
-                  Expanded(
-                    child: looseItems.isEmpty
-                        ? const Center(child: Text("No loose items added yet"))
-                        : GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 1.1,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
-                            ),
-                            itemCount: looseItems.length,
-                            itemBuilder: (context, i) {
-                              final item = looseItems[i];
-                              return InkWell(
-                                onTap: () {
-                                  Navigator.pop(ctx);
-                                  _showWeightInputDialog(item);
-                                },
-                                child: Card(
-                                  elevation: 1,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        _buildItemImage(item.imagePath, item.name),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          item.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                        Text(
-                                          "₹${item.sellPrice}/${item.unit}",
-                                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE65100),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: const Icon(Icons.add),
-                      label: const Text("+ New loose Item", style: TextStyle(fontSize: 16)),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _showAddNewProductDialog(defaultLoose: true);
-                      },
-                    ),
-                  )
+                  const Text("Loose / Weighing Items", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
                 ],
               ),
-            );
-          },
+              const Divider(),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 1.1, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                  itemCount: looseItems.length,
+                  itemBuilder: (context, i) {
+                    final item = looseItems[i];
+                    return InkWell(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showWeightInputDialog(item);
+                      },
+                      child: Card(
+                        elevation: 1,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildItemImage(item.imagePath, item.name),
+                              const SizedBox(height: 6),
+                              Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text("₹${item.sellPrice}/${item.unit}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -272,32 +138,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text("Enter Weight/Qty for ${p.name}"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Rate: ₹${p.sellPrice} per ${p.unit}"),
-            const SizedBox(height: 12),
-            TextField(
-              controller: qtyCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: "Quantity (${p.unit})",
-                border: const OutlineInputBorder(),
-                hintText: "e.g. 0.5 for 500g, 1.25",
-              ),
-            ),
-          ],
+        content: TextField(
+          controller: qtyCtrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          autofocus: true,
+          decoration: InputDecoration(labelText: "Quantity (${p.unit})", border: const OutlineInputBorder()),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E7D32), foregroundColor: Colors.white),
             onPressed: () {
               double? q = double.tryParse(qtyCtrl.text.trim());
-              if (q != null && q > 0) {
-                _addToCart(p, qty: q);
-              }
+              if (q != null && q > 0) _addToCart(p, qty: q);
               Navigator.pop(ctx);
             },
             child: const Text("Add to Bill"),
@@ -313,218 +165,212 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     final now = DateTime.now();
 
     setState(() {
-      for (var c in receiptItems) {
-        c.product.stock -= c.quantity;
-      }
-      salesHistory.insert(
-        0,
-        SaleHistory(
-          id: now.millisecondsSinceEpoch.toString(),
-          date: now,
-          total: totalAmount,
-          paymentMode: mode,
-          items: receiptItems,
-          customerName: customerName,
-        ),
-      );
+      for (var c in receiptItems) { c.product.stock -= c.quantity; }
+      salesHistory.insert(0, SaleHistory(id: now.millisecondsSinceEpoch.toString(), date: now, total: totalAmount, paymentMode: mode, items: receiptItems, customerName: customerName));
       cart.clear();
     });
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(20),
-        height: MediaQuery.of(context).size.height * 0.85,
+        height: MediaQuery.of(context).size.height * 0.8,
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFAFAFA),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
+            Text(shopName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text("Mode: $mode ${customerName != null ? "($customerName)" : ""}"),
+            const Divider(),
+            Expanded(
+              child: ListView(
+                children: receiptItems.map((item) => Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [Text("${item.product.name} x ${item.quantity}"), Text("₹${item.total.toStringAsFixed(1)}")],
+                )).toList(),
               ),
-              child: Column(
+            ),
+            const Divider(),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text("TOTAL PAID", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              Text("₹${totalAmount.toStringAsFixed(1)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
+            ]),
+            const SizedBox(height: 12),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text("Done / New Bill")),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMakeBillScreen() {
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.all(12),
+          height: 100,
+          decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(16)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.qr_code_scanner, color: Colors.white, size: 36),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: () { if (inventory.isNotEmpty) _addToCart(inventory.first); },
+                child: const Text("Scan Barcode"),
+              )
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Bill (${cart.length} items)", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFF3E0), foregroundColor: const Color(0xFFE65100)),
+                icon: const Icon(Icons.scale, size: 18),
+                label: const Text("Loose Item"),
+                onPressed: _showLooseItemSheet,
+              )
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: cart.length,
+            itemBuilder: (ctx, i) {
+              final item = cart[i];
+              return ListTile(
+                leading: _buildItemImage(item.product.imagePath, item.product.name),
+                title: Text(item.product.name),
+                subtitle: Text("₹${item.customPrice} x ${item.quantity}"),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(icon: const Icon(Icons.remove_circle, color: Colors.red), onPressed: () => setState(() => item.quantity > 1 ? item.quantity-- : cart.removeAt(i))),
+                    Text("${item.quantity}"),
+                    IconButton(icon: const Icon(Icons.add_circle, color: Colors.green), onPressed: () => setState(() => item.quantity++)),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.white,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(shopName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  Text("Date: ${now.day}/${now.month}/${now.year}  Time: ${now.hour}:${now.minute}"),
-                  Text("Mode: $mode ${customerName != null ? "($customerName)" : ""}"),
-                  const Divider(),
-                  ...receiptItems.map((item) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(child: Text("${item.product.name} x ${item.quantity} ${item.product.unit}")),
-                            Text("₹${item.total.toStringAsFixed(1)}"),
-                          ],
-                        ),
-                      )),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("TOTAL PAID", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text("₹${totalAmount.toStringAsFixed(1)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
-                    ],
-                  ),
+                  const Text("Grand Total", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text("₹${grandTotal.toStringAsFixed(1)}", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32))),
                 ],
               ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: Colors.white),
-                icon: const Icon(Icons.share),
-                label: const Text("Share on WhatsApp"),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Receipt copied to WhatsApp!")));
-                },
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("New Bill", style: TextStyle(fontSize: 16)),
-              ),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showOnlineQrDialog() {
-    final String upiUrl = "upi://pay?pa=$upiId&pn=$shopName&am=${grandTotal.toStringAsFixed(2)}&cu=INR";
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Center(child: Text("Scan UPI QR to Pay")),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 200,
-              height: 200,
-              child: QrImageView(
-                data: upiUrl,
-                version: QrVersions.auto,
-                size: 200.0,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text("Amount: ₹${grandTotal.toStringAsFixed(2)}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
-            Text("UPI ID: $upiId", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _showPaymentSuccessBill("Online UPI");
-            },
-            child: const Text("Payment Received"),
-          )
-        ],
-      ),
-    );
-  }
-
-  void _showUdhaarDialog() {
-    final nameCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Add to Udhaar (Credit)"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Person Name*", border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            TextField(controller: phoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: "Mobile Number", border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            Text("Total Udhaar Amount: ₹${grandTotal.toStringAsFixed(1)}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () {
-              if (nameCtrl.text.trim().isEmpty) return;
-              setState(() {
-                udhaarList.add(UdhaarRecord(
-                  personName: nameCtrl.text.trim(),
-                  phone: phoneCtrl.text.trim(),
-                  amount: grandTotal,
-                  date: DateTime.now(),
-                ));
-              });
-              Navigator.pop(ctx);
-              _showPaymentSuccessBill("Udhaar", customerName: nameCtrl.text.trim());
-            },
-            child: const Text("Save Udhaar"),
-          )
-        ],
-      ),
-    );
-  }
-
-  void _showAddNewProductDialog({bool defaultLoose = false}) {
-    final nameCtrl = TextEditingController();
-    final buyCtrl = TextEditingController();
-    final sellCtrl = TextEditingController();
-    final stockCtrl = TextEditingController();
-    final unitCtrl = TextEditingController(text: defaultLoose ? "kg" : "pcs");
-    String? localImgPath;
-    ItemType selectedType = defaultLoose ? ItemType.loose : ItemType.standard;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDlgState) => AlertDialog(
-          title: Text(selectedType == ItemType.loose ? "Add Loose Item" : "Add New Item"),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    final picked = await _picker.pickImage(source: ImageSource.camera);
-                    if (picked != null) {
-                      setDlgState(() => localImgPath = picked.path);
-                    }
-                  },
-                  child: Container(
-                    height: 70,
-                    width: 70,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                      onPressed: cart.isEmpty ? null : () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text("Scan UPI QR"),
+                            content: SizedBox(
+                              width: 180,
+                              height: 180,
+                              child: QrImageView(data: "upi://pay?pa=$upiId&pn=$shopName&am=${grandTotal.toStringAsFixed(2)}&cu=INR"),
+                            ),
+                            actions: [ElevatedButton(onPressed: () { Navigator.pop(ctx); _showPaymentSuccessBill("Online UPI"); }, child: const Text("Done"))],
+                          ),
+                        );
+                      },
+                      child: const Text("Online"),
                     ),
-                    child: localImgPath != null
-                        ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.file(File(localImgPath!), fit: BoxFit.cover))
-                        : const Icon(Icons.camera_alt, color: Colors.grey, size: 30),
                   ),
-                ),
-                const SizedBox(height: 10),
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Product Name*", border: OutlineInputBorder())),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(child: TextField(controller: buyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Buy Price", border: OutlineInputBorder()))),
-                    const SizedBox(width: 8),
-                    Expanded(child: TextField(controller: sellCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText:
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
+                      onPressed: cart.isEmpty ? null : () => _showPaymentSuccessBill("Cash"),
+                      child: const Text("Cash"),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.brown, foregroundColor: Colors.white),
+                      onPressed: cart.isEmpty ? null : () {
+                        final nCtrl = TextEditingController();
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text("Udhaar Details"),
+                            content: TextField(controller: nCtrl, decoration: const InputDecoration(labelText: "Customer Name")),
+                            actions: [ElevatedButton(onPressed: () {
+                              udhaarList.add(UdhaarRecord(personName: nCtrl.text, phone: '', amount: grandTotal, date: DateTime.now()));
+                              Navigator.pop(ctx);
+                              _showPaymentSuccessBill("Udhaar", customerName: nCtrl.text);
+                            }, child: const Text("Save"))],
+                          ),
+                        );
+                      },
+                      child: const Text("Udhaar"),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget _buildMyShopScreen() {
+    return ListView.builder(
+      itemCount: inventory.length,
+      itemBuilder: (ctx, i) => ListTile(
+        leading: _buildItemImage(inventory[i].imagePath, inventory[i].name),
+        title: Text(inventory[i].name),
+        subtitle: Text("Price: ₹${inventory[i].sellPrice} | Stock: ${inventory[i].stock} ${inventory[i].unit}"),
+        trailing: IconButton(icon: const Icon(Icons.add_shopping_cart, color: Colors.green), onPressed: () => _addToCart(inventory[i])),
+      ),
+    );
+  }
+
+  Widget _buildMySalesScreen() {
+    double totalRevenue = salesHistory.fold(0, (sum, s) => sum + s.total);
+    double totalUdhaar = udhaarList.fold(0, (sum, u) => sum + u.amount);
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Card(child: ListTile(title: const Text("Total Sales"), trailing: Text("₹$totalRevenue", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)))),
+          Card(child: ListTile(title: const Text("Total Udhaar"), trailing: Text("₹$totalUdhaar", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red)))),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(_currentIndex == 0 ? "My Shop" : _currentIndex == 1 ? shopName : "Sales & Reports"), backgroundColor: Colors.green.shade800, foregroundColor: Colors.white),
+      body: _currentIndex == 0 ? _buildMyShopScreen() : _currentIndex == 1 ? _buildMakeBillScreen() : _buildMySalesScreen(),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.store), label: 'Shop'),
+          NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Make Bill'),
+          NavigationDestination(icon: Icon(Icons.analytics), label: 'Sales'),
+        ],
+      ),
+    );
+  }
+}
