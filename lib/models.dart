@@ -1,17 +1,12 @@
-import 'dart:io';
-
-enum ItemType { standard, loose }
-
 class Product {
   final String id;
   String name;
   double buyPrice;
   double sellPrice;
   double stock;
-  ItemType type;
-  String? unit;
+  bool isLoose;
+  String unit;
   String? barcode;
-  String? imagePath;
 
   Product({
     required this.id,
@@ -19,55 +14,55 @@ class Product {
     required this.buyPrice,
     required this.sellPrice,
     required this.stock,
-    this.type = ItemType.standard,
-    this.unit = 'pcs',
+    this.isLoose = false,
+    this.unit = 'piece',
     this.barcode,
-    this.imagePath,
   });
 }
 
 class CartItem {
   final Product product;
   double quantity;
-  double customPrice;
 
-  CartItem({
-    required this.product,
-    required this.quantity,
-    required this.customPrice,
-  });
+  CartItem({required this.product, required this.quantity});
 
-  double get total => quantity * customPrice;
+  double get total => product.sellPrice * quantity;
 }
 
-class UdhaarRecord {
-  final String personName;
+class Customer {
+  final String name;
   final String phone;
-  final double amount;
-  final DateTime date;
+  double udhaarAmount;
 
-  UdhaarRecord({
-    required this.personName,
-    required this.phone,
-    required this.amount,
-    required this.date,
+  Customer({required this.name, required this.phone, this.udhaarAmount = 0.0});
+}
+
+class StoreConfig {
+  String storeName;
+  String upiId;
+  String planType; // "Rs 50 / Month" ya "Rs 549 / Year"
+  bool isSubscribed;
+
+  StoreConfig({
+    this.storeName = "Damodar mahto general",
+    this.upiId = "6202187843@upi",
+    this.planType = "Rs 50 / Month",
+    this.isSubscribed = true,
   });
 }
 
-class SaleHistory {
-  final String id;
-  final DateTime date;
+class BillReceipt {
+  final DateTime time;
+  final List<CartItem> items;
   final double total;
   final String paymentMode;
-  final List<CartItem> items;
   final String? customerName;
 
-  SaleHistory({
-    required this.id,
-    required this.date,
+  BillReceipt({
+    required this.time,
+    required this.items,
     required this.total,
     required this.paymentMode,
-    required this.items,
     this.customerName,
   });
 }
