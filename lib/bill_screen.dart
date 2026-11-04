@@ -181,7 +181,7 @@ class _BillScreenState extends State<BillScreen> {
                       shrinkWrap: true,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       itemCount: looseList.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      separatorBuilder: (context, index) => const Divider(height: 1),
                       itemBuilder: (c, i) {
                         final item = looseList[i];
                         return ListTile(
@@ -349,7 +349,7 @@ class _BillScreenState extends State<BillScreen> {
                         ? const Center(child: Text("Koi customer nahi mila", style: TextStyle(color: Colors.black45)))
                         : ListView.separated(
                             itemCount: widget.customers.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            separatorBuilder: (context, index) => const Divider(height: 1),
                             itemBuilder: (c, i) {
                               final cust = widget.customers[i];
                               return ListTile(
@@ -434,8 +434,8 @@ class _BillScreenState extends State<BillScreen> {
 
   Widget _buildReceiptView() {
     final bill = completedBill!;
-    final payMode = bill.paymentMode;
-    final totalBillStr = bill.totalAmount.toStringAsFixed(0);
+    final paymentName = bill.paymentMode;
+    final totalBillAmount = bill.totalAmount.toStringAsFixed(0);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -471,21 +471,22 @@ class _BillScreenState extends State<BillScreen> {
                   ),
                 ],
                 const Divider(height: 24),
-                ...bill.items.map((item) {
-                  final isKg = item.product.type == ItemType.looseKg;
-                  final qtyStr = item.quantity.toStringAsFixed(isKg ? 2 : 0);
-                  final priceStr = item.totalPrice.toStringAsFixed(0);
-                  return Padding(
+                for (final item in bill.items)
+                  Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(
-                            "${item.product.name} (${qtyStr}x)",
+                            "${item.product.name} (${item.quantity.toStringAsFixed(item.product.type == ItemType.looseKg ? 2 : 0)}x)",
                             style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                         ),
                         Text(
-                          "₹$priceStr",
+                          "₹${item.totalPrice.toStringAsFixed(0)}",
                           style: const TextStyle(fontWeight: FontWeight.bold),
-                     
+                        ),
+                      ],
+                    ),
+                  ),
+                const Di
