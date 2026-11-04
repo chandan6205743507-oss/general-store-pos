@@ -30,8 +30,8 @@ class _BillScreenState extends State<BillScreen> {
 
   double get totalAmount {
     double sum = 0.0;
-    for (final item in cartItems) {
-      sum += item.totalPrice;
+    for (int i = 0; i < cartItems.length; i++) {
+      sum += cartItems[i].totalPrice;
     }
     return sum;
   }
@@ -44,21 +44,23 @@ class _BillScreenState extends State<BillScreen> {
   void _addItemToCart(ProductItem product, {double qty = 1.0, double? price}) {
     _triggerScanFeedback();
     setState(() {
-      final existingIndex = cartItems.indexWhere((c) => c.product.id == product.id);
+      final int existingIndex = cartItems.indexWhere((c) => c.product.id == product.id);
       if (existingIndex != -1) {
         cartItems[existingIndex].quantity += qty;
       } else {
-        cartItems.add(CartItem(
-          product: product,
-          quantity: qty,
-          customPrice: price ?? product.sellingPrice,
-        ));
+        cartItems.add(
+          CartItem(
+            product: product,
+            quantity: qty,
+            customPrice: price ?? product.sellingPrice,
+          ),
+        );
       }
     });
   }
 
   void _showQuickSellDialog(String scannedBarcode) {
-    final priceController = TextEditingController();
+    final TextEditingController priceController = TextEditingController();
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -75,12 +77,20 @@ class _BillScreenState extends State<BillScreen> {
               children: [
                 Text(
                   scannedBarcode,
-                  style: const TextStyle(color: Colors.black54, fontSize: 13, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 const Text(
                   "New Barcode Item",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Container(
@@ -95,14 +105,22 @@ class _BillScreenState extends State<BillScreen> {
                     children: [
                       const Text(
                         "Selling Price (₹)",
-                        style: TextStyle(fontSize: 12, color: Color(0xFF8D6E63), fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF8D6E63),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       TextField(
                         controller: priceController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         textAlign: TextAlign.center,
                         autofocus: true,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
                         decoration: const InputDecoration(
                           hintText: "00",
                           hintStyle: TextStyle(color: Colors.black26),
@@ -125,10 +143,10 @@ class _BillScreenState extends State<BillScreen> {
                       ),
                     ),
                     onPressed: () {
-                      final price = double.tryParse(priceController.text.trim()) ?? 0.0;
+                      final double price = double.tryParse(priceController.text.trim()) ?? 0.0;
                       if (price <= 0) return;
 
-                      final quickProduct = ProductItem(
+                      final ProductItem quickProduct = ProductItem(
                         id: DateTime.now().millisecondsSinceEpoch.toString(),
                         name: "Item $scannedBarcode",
                         barcode: scannedBarcode,
@@ -143,7 +161,11 @@ class _BillScreenState extends State<BillScreen> {
                     },
                     child: const Text(
                       "OK",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -156,7 +178,7 @@ class _BillScreenState extends State<BillScreen> {
   }
 
   void _openLooseItemPicker() {
-    final looseList = widget.allProducts.where((p) => p.type != ItemType.barcode).toList();
+    final List<ProductItem> looseList = widget.allProducts.where((p) => p.type != ItemType.barcode).toList();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -202,9 +224,9 @@ class _BillScreenState extends State<BillScreen> {
                         itemCount: looseList.length,
                         separatorBuilder: (context, index) => const Divider(height: 1),
                         itemBuilder: (c, i) {
-                          final item = looseList[i];
-                          final isKg = item.type == ItemType.looseKg;
-                          final priceLabel = isKg ? "₹${item.sellingPrice}/kg" : "₹${item.sellingPrice}/pc";
+                          final ProductItem item = looseList[i];
+                          final bool isKg = item.type == ItemType.looseKg;
+                          final String priceLabel = isKg ? "₹${item.sellingPrice}/kg" : "₹${item.sellingPrice}/pc";
 
                           return ListTile(
                             leading: CircleAvatar(
@@ -233,11 +255,11 @@ class _BillScreenState extends State<BillScreen> {
   }
 
   void _editCartItem(CartItem item) {
-    final isKg = item.product.type == ItemType.looseKg;
-    final qtyController = TextEditingController(
+    final bool isKg = item.product.type == ItemType.looseKg;
+    final TextEditingController qtyController = TextEditingController(
       text: isKg ? item.quantity.toString() : item.quantity.toStringAsFixed(0),
     );
-    final priceController = TextEditingController(
+    final TextEditingController priceController = TextEditingController(
       text: item.customPrice.toStringAsFixed(0),
     );
 
@@ -289,8 +311,8 @@ class _BillScreenState extends State<BillScreen> {
                       ),
                     ),
                     onPressed: () {
-                      final newQty = double.tryParse(qtyController.text.trim()) ?? item.quantity;
-                      final newPrice = double.tryParse(priceController.text.trim()) ?? item.customPrice;
+                      final double newQty = double.tryParse(qtyController.text.trim()) ?? item.quantity;
+                      final double newPrice = double.tryParse(priceController.text.trim()) ?? item.customPrice;
                       if (newQty > 0 && newPrice >= 0) {
                         setState(() {
                           item.quantity = newQty;
@@ -312,8 +334,8 @@ class _BillScreenState extends State<BillScreen> {
 
   void _openUdhaarDialog() {
     int activeTab = 0;
-    final nameController = TextEditingController();
-    final phoneController = TextEditingController();
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController phoneController = TextEditingController();
 
     showDialog(
       context: context,
@@ -394,7 +416,7 @@ class _BillScreenState extends State<BillScreen> {
                                 itemCount: widget.customers.length,
                                 separatorBuilder: (context, index) => const Divider(height: 1),
                                 itemBuilder: (c, i) {
-                                  final cust = widget.customers[i];
+                                  final UdhaarCustomer cust = widget.customers[i];
                                   return ListTile(
                                     dense: true,
                                     title: Text(cust.name, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -442,10 +464,10 @@ class _BillScreenState extends State<BillScreen> {
                                 ),
                               ),
                               onPressed: () {
-                                final name = nameController.text.trim();
+                                final String name = nameController.text.trim();
                                 if (name.isEmpty) return;
 
-                                final newCust = UdhaarCustomer(
+                                final UdhaarCustomer newCust = UdhaarCustomer(
                                   id: DateTime.now().millisecondsSinceEpoch.toString(),
                                   name: name,
                                   phone: phoneController.text.trim(),
@@ -461,41 +483,4 @@ class _BillScreenState extends State<BillScreen> {
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _completePayment(String mode, {String? customerName}) {
-    if (cartItems.isEmpty) return;
-
-    final bill = BillRecord(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      date: DateTime.now(),
-      items: List.from(cartItems),
-      totalAmount: totalAmount,
-      paymentMode: mode,
-      customerName: customerName,
-    );
-
-    widget.onBillCreated(bill);
-    setState(() {
-      completedBill = bill;
-      cartItems.clear();
-    });
-  }
-
-  Widget _buildReceiptView() {
-    final bill = completedBill;
-    if (bill == null) {
-      return const SizedBox();
-    }
-
-    fina
+                  
