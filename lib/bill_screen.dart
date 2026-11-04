@@ -53,7 +53,6 @@ class _BillScreenState extends State<BillScreen> {
     });
   }
 
-  // 1. Un-added Barcode Quick Sell Dialog
   void _showQuickSellDialog(String scannedBarcode) {
     final priceController = TextEditingController();
     showDialog(
@@ -146,7 +145,6 @@ class _BillScreenState extends State<BillScreen> {
     );
   }
 
-  // 2. Loose Items Picker Modal (Kilo/Gram/Piece)
   void _openLooseItemPicker() {
     final looseList = widget.allProducts.where((p) => p.type != ItemType.barcode).toList();
     showModalBottomSheet(
@@ -155,60 +153,62 @@ class _BillScreenState extends State<BillScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 6),
-            height: 4,
-            width: 40,
-            decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(4)),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text("Select Loose Item", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              height: 4,
+              width: 40,
+              decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(4)),
             ),
-          ),
-          const Divider(height: 1),
-          looseList.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: Text("Loose items list khali hai. Shop se add karein.")),
-                )
-              : Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: looseList.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (c, i) {
-                      final item = looseList[i];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: const Color(0xFFF1EADB),
-                          child: Icon(
-                            item.type == ItemType.looseKg ? Icons.scale : Icons.category,
-                            color: const Color(0xFF8D6E63),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text("Select Loose Item", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const Divider(height: 1),
+            looseList.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: Text("Loose items list khali hai. Shop se add karein.")),
+                  )
+                : Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: looseList.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (c, i) {
+                        final item = looseList[i];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFFF1EADB),
+                            child: Icon(
+                              item.type == ItemType.looseKg ? Icons.scale : Icons.category,
+                              color: const Color(0xFF8D6E63),
+                            ),
                           ),
-                        ),
-                        title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(item.type == ItemType.looseKg ? "₹${item.sellingPrice}/kg" : "₹${item.sellingPrice}/pc"),
-                        trailing: const Icon(Icons.add_circle, color: Color(0xFF7CA655), size: 28),
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          _addItemToCart(item);
-                        },
-                      );
-                    },
+                          title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(item.type == ItemType.looseKg ? "₹${item.sellingPrice}/kg" : "₹${item.sellingPrice}/pc"),
+                          trailing: const Icon(Icons.add_circle, color: Color(0xFF7CA655), size: 28),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _addItemToCart(item);
+                          },
+                        );
+                      },
+                    ),
                   ),
-                ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // 3. Edit Quantity & Custom Price (Pencil Button)
   void _editCartItem(CartItem item) {
     final isKg = item.product.type == ItemType.looseKg;
     final qtyController = TextEditingController(
@@ -281,7 +281,6 @@ class _BillScreenState extends State<BillScreen> {
     );
   }
 
-  // 4. Udhaar Flow (Select Customer or Add New)
   void _openUdhaarDialog() {
     int activeTab = 0;
     final nameController = TextEditingController();
@@ -413,7 +412,6 @@ class _BillScreenState extends State<BillScreen> {
     );
   }
 
-  // 5. Complete Sale
   void _completePayment(String mode, {String? customerName}) {
     if (cartItems.isEmpty) return;
 
@@ -433,7 +431,6 @@ class _BillScreenState extends State<BillScreen> {
     });
   }
 
-  // 6. Thermal Receipt Screen
   Widget _buildReceiptView() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -482,4 +479,5 @@ class _BillScreenState extends State<BillScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text("Mode", style: TextStyle(color: Colors.black54)),
-                    Text("${completedBill?.paymentMod
+                    Text("${completedBill?.paymentMode}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                  
