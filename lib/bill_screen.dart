@@ -389,10 +389,11 @@ class _BillScreenState extends State<BillScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () {
-                        if (nameController.text.trim().isEmpty) return;
+                        final name = nameController.text.trim();
+                        if (name.isEmpty) return;
                         final newCust = UdhaarCustomer(
                           id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          name: nameController.text.trim(),
+                          name: name,
                           phone: phoneController.text.trim(),
                           pendingAmount: totalAmount,
                         );
@@ -432,6 +433,10 @@ class _BillScreenState extends State<BillScreen> {
   }
 
   Widget _buildReceiptView() {
+    final bill = completedBill!;
+    final payMode = bill.paymentMode;
+    final totalBillStr = bill.totalAmount.toStringAsFixed(0);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -451,33 +456,36 @@ class _BillScreenState extends State<BillScreen> {
                   child: Text("GENERAL STORE", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
                 Center(
-                  child: Text("Date: ${DateTime.now().toString().substring(0, 16)}", style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                  child: Text(
+                    "Date: ${DateTime.now().toString().substring(0, 16)}",
+                    style: const TextStyle(color: Colors.black54, fontSize: 12),
+                  ),
                 ),
-                if (completedBill?.customerName != null) ...[
+                if (bill.customerName != null) ...[
                   const SizedBox(height: 4),
                   Center(
-                    child: Text("Customer: ${completedBill!.customerName}", style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFC88523))),
+                    child: Text(
+                      "Customer: ${bill.customerName}",
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFC88523)),
+                    ),
                   ),
                 ],
                 const Divider(height: 24),
-                ...?completedBill?.items.map((item) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              "${item.product.name} (${item.quantity.toStringAsFixed(item.product.type == ItemType.looseKg ? 2 : 0)}x)",
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
+                ...bill.items.map((item) {
+                  final isKg = item.product.type == ItemType.looseKg;
+                  final qtyStr = item.quantity.toStringAsFixed(isKg ? 2 : 0);
+                  final priceStr = item.totalPrice.toStringAsFixed(0);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            "${item.product.name} (${qtyStr}x)",
+                            style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
-                          Text("₹${item.totalPrice.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    )),
-                const Divider(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text("Mode", style: TextStyle(color: Colors.black54)),
-                    Text("${completedBill?.paymentMode}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                  
+                        ),
+                        Text(
+                          "₹$priceStr",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                     
