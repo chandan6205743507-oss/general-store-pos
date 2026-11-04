@@ -29,7 +29,11 @@ class _BillScreenState extends State<BillScreen> {
   BillRecord? completedBill;
 
   double get totalAmount {
-    return cartItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+    double sum = 0.0;
+    for (final item in cartItems) {
+      sum += item.totalPrice;
+    }
+    return sum;
   }
 
   void _triggerScanFeedback() {
@@ -58,90 +62,96 @@ class _BillScreenState extends State<BillScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                scannedBarcode,
-                style: const TextStyle(color: Colors.black54, fontSize: 13, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                "New Barcode Item",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-              ),
-              const SizedBox(height: 18),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFBF8EE),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE5DECA)),
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  scannedBarcode,
+                  style: const TextStyle(color: Colors.black54, fontSize: 13, fontWeight: FontWeight.w500),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Selling Price (₹)",
-                      style: TextStyle(fontSize: 12, color: Color(0xFF8D6E63), fontWeight: FontWeight.bold),
-                    ),
-                    TextField(
-                      controller: priceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      textAlign: TextAlign.center,
-                      autofocus: true,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
-                      decoration: const InputDecoration(
-                        hintText: "00",
-                        hintStyle: TextStyle(color: Colors.black26),
-                        border: InputBorder.none,
+                const SizedBox(height: 6),
+                const Text(
+                  "New Barcode Item",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFBF8EE),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE5DECA)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Selling Price (₹)",
+                        style: TextStyle(fontSize: 12, color: Color(0xFF8D6E63), fontWeight: FontWeight.bold),
+                      ),
+                      TextField(
+                        controller: priceController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        textAlign: TextAlign.center,
+                        autofocus: true,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+                        decoration: const InputDecoration(
+                          hintText: "00",
+                          hintStyle: TextStyle(color: Colors.black26),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFC88523),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 22),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFC88523),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    final price = double.tryParse(priceController.text.trim()) ?? 0.0;
-                    if (price <= 0) return;
+                    onPressed: () {
+                      final price = double.tryParse(priceController.text.trim()) ?? 0.0;
+                      if (price <= 0) return;
 
-                    final quickProduct = ProductItem(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      name: "Item $scannedBarcode",
-                      barcode: scannedBarcode,
-                      type: ItemType.barcode,
-                      sellingPrice: price,
-                      currentStock: 0,
-                      isPending: true,
-                    );
-                    widget.onQuickAddProduct(quickProduct);
-                    _addItemToCart(quickProduct, qty: 1.0, price: price);
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text(
-                    "OK",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      final quickProduct = ProductItem(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        name: "Item $scannedBarcode",
+                        barcode: scannedBarcode,
+                        type: ItemType.barcode,
+                        sellingPrice: price,
+                        currentStock: 0,
+                        isPending: true,
+                      );
+                      widget.onQuickAddProduct(quickProduct);
+                      _addItemToCart(quickProduct, qty: 1.0, price: price);
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text(
+                      "OK",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -153,59 +163,72 @@ class _BillScreenState extends State<BillScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 10, bottom: 6),
-              height: 4,
-              width: 40,
-              decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(4)),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text("Select Loose Item", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 6),
+                height: 4,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            looseList.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: Text("Loose items list khali hai. Shop se add karein.")),
-                  )
-                : Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: looseList.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
-                      itemBuilder: (c, i) {
-                        final item = looseList[i];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: const Color(0xFFF1EADB),
-                            child: Icon(
-                              item.type == ItemType.looseKg ? Icons.scale : Icons.category,
-                              color: const Color(0xFF8D6E63),
-                            ),
-                          ),
-                          title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(item.type == ItemType.looseKg ? "₹${item.sellingPrice}/kg" : "₹${item.sellingPrice}/pc"),
-                          trailing: const Icon(Icons.add_circle, color: Color(0xFF7CA655), size: 28),
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _addItemToCart(item);
-                          },
-                        );
-                      },
-                    ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Select Loose Item",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-          ],
-        ),
-      ),
+                ),
+              ),
+              const Divider(height: 1),
+              looseList.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(
+                        child: Text("Loose items list khali hai. Shop se add karein."),
+                      ),
+                    )
+                  : Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: looseList.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (c, i) {
+                          final item = looseList[i];
+                          final isKg = item.type == ItemType.looseKg;
+                          final priceLabel = isKg ? "₹${item.sellingPrice}/kg" : "₹${item.sellingPrice}/pc";
+
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFFF1EADB),
+                              child: Icon(
+                                isKg ? Icons.scale : Icons.category,
+                                color: const Color(0xFF8D6E63),
+                              ),
+                            ),
+                            title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(priceLabel),
+                            trailing: const Icon(Icons.add_circle, color: Color(0xFF7CA655), size: 28),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _addItemToCart(item);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -220,64 +243,70 @@ class _BillScreenState extends State<BillScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.product.name,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: qtyController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: isKg ? "Quantity (in Kg)" : "How many Pieces?",
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: isKg ? "Rate per Kg (₹)" : "Discounted price of 1 Piece (₹)",
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7CA655),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: () {
-                    final newQty = double.tryParse(qtyController.text.trim()) ?? item.quantity;
-                    final newPrice = double.tryParse(priceController.text.trim()) ?? item.customPrice;
-                    if (newQty > 0 && newPrice >= 0) {
-                      setState(() {
-                        item.quantity = newQty;
-                        item.customPrice = newPrice;
-                      });
-                    }
-                    Navigator.pop(ctx);
-                  },
-                  child: const Text("OK", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-              ),
-            ],
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-        ),
-      ),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.product.name,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: qtyController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: isKg ? "Quantity (in Kg)" : "How many Pieces?",
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: isKg ? "Rate per Kg (₹)" : "Discounted price of 1 Piece (₹)",
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7CA655),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      final newQty = double.tryParse(qtyController.text.trim()) ?? item.quantity;
+                      final newPrice = double.tryParse(priceController.text.trim()) ?? item.customPrice;
+                      if (newQty > 0 && newPrice >= 0) {
+                        setState(() {
+                          item.quantity = newQty;
+                          item.customPrice = newPrice;
+                        });
+                      }
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text("OK", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -288,128 +317,159 @@ class _BillScreenState extends State<BillScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setUdhaarState) => Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setUdhaarState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setUdhaarState(() => activeTab = 0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: activeTab == 0 ? const Color(0xFFDDD2B8) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            "Select person",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: activeTab == 0 ? const Color(0xFF4A3426) : Colors.black54,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setUdhaarState(() {
+                                activeTab = 0;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: activeTab == 0 ? const Color(0xFFDDD2B8) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                "Select person",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: activeTab == 0 ? const Color(0xFF4A3426) : Colors.black54,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setUdhaarState(() => activeTab = 1),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: activeTab == 1 ? const Color(0xFFDDD2B8) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            "New person",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: activeTab == 1 ? const Color(0xFF4A3426) : Colors.black54,
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setUdhaarState(() {
+                                activeTab = 1;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: activeTab == 1 ? const Color(0xFFDDD2B8) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                "New person",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: activeTab == 1 ? const Color(0xFF4A3426) : Colors.black54,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
+                    const SizedBox(height: 16),
+                    if (activeTab == 0)
+                      SizedBox(
+                        height: 200,
+                        child: widget.customers.isEmpty
+                            ? const Center(
+                                child: Text("Koi customer nahi mila", style: TextStyle(color: Colors.black45)),
+                              )
+                            : ListView.separated(
+                                itemCount: widget.customers.length,
+                                separatorBuilder: (context, index) => const Divider(height: 1),
+                                itemBuilder: (c, i) {
+                                  final cust = widget.customers[i];
+                                  return ListTile(
+                                    dense: true,
+                                    title: Text(cust.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text(cust.phone),
+                                    trailing: Text(
+                                      "Old: ₹${cust.pendingAmount.toStringAsFixed(0)}",
+                                      style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      _completePayment("Udhaar", customerName: cust.name);
+                                    },
+                                  );
+                                },
+                              ),
+                      )
+                    else
+                      Column(
+                        children: [
+                          TextField(
+                            controller: phoneController,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(
+                              labelText: "Phone number",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: nameController,
+                            decoration: const InputDecoration(
+                              labelText: "Person name",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF7CA655),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              onPressed: () {
+                                final name = nameController.text.trim();
+                                if (name.isEmpty) return;
+
+                                final newCust = UdhaarCustomer(
+                                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                  name: name,
+                                  phone: phoneController.text.trim(),
+                                  pendingAmount: totalAmount,
+                                );
+                                widget.onAddCustomer(newCust);
+                                Navigator.pop(ctx);
+                                _completePayment("Udhaar", customerName: newCust.name);
+                              },
+                              child: const Text(
+                                "Add Udhaar",
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                if (activeTab == 0) ...[
-                  SizedBox(
-                    height: 200,
-                    child: widget.customers.isEmpty
-                        ? const Center(child: Text("Koi customer nahi mila", style: TextStyle(color: Colors.black45)))
-                        : ListView.separated(
-                            itemCount: widget.customers.length,
-                            separatorBuilder: (context, index) => const Divider(height: 1),
-                            itemBuilder: (c, i) {
-                              final cust = widget.customers[i];
-                              return ListTile(
-                                dense: true,
-                                title: Text(cust.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text(cust.phone),
-                                trailing: Text(
-                                  "Old: ₹${cust.pendingAmount.toStringAsFixed(0)}",
-                                  style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w600),
-                                ),
-                                onTap: () {
-                                  Navigator.pop(ctx);
-                                  _completePayment("Udhaar", customerName: cust.name);
-                                },
-                              );
-                            },
-                          ),
-                  ),
-                ] else ...[
-                  TextField(
-                    controller: phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: "Phone number", border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: "Person name", border: OutlineInputBorder()),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7CA655),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        final name = nameController.text.trim();
-                        if (name.isEmpty) return;
-                        final newCust = UdhaarCustomer(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          name: name,
-                          phone: phoneController.text.trim(),
-                          pendingAmount: totalAmount,
-                        );
-                        widget.onAddCustomer(newCust);
-                        Navigator.pop(ctx);
-                        _completePayment("Udhaar", customerName: newCust.name);
-                      },
-                      child: const Text("Add Udhaar", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -433,60 +493,9 @@ class _BillScreenState extends State<BillScreen> {
   }
 
   Widget _buildReceiptView() {
-    final bill = completedBill!;
-    final paymentName = bill.paymentMode;
-    final totalBillAmount = bill.totalAmount.toStringAsFixed(0);
+    final bill = completedBill;
+    if (bill == null) {
+      return const SizedBox();
+    }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE5E2D9)),
-              boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 8, offset: Offset(0, 2))],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Center(
-                  child: Text("GENERAL STORE", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                ),
-                Center(
-                  child: Text(
-                    "Date: ${DateTime.now().toString().substring(0, 16)}",
-                    style: const TextStyle(color: Colors.black54, fontSize: 12),
-                  ),
-                ),
-                if (bill.customerName != null) ...[
-                  const SizedBox(height: 4),
-                  Center(
-                    child: Text(
-                      "Customer: ${bill.customerName}",
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFC88523)),
-                    ),
-                  ),
-                ],
-                const Divider(height: 24),
-                for (final item in bill.items)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            "${item.product.name} (${item.quantity.toStringAsFixed(item.product.type == ItemType.looseKg ? 2 : 0)}x)",
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                        Text(
-                          "₹${item.totalPrice.toStringAsFixed(0)}",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-                const Di
+    fina
